@@ -1,0 +1,52 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const Member = require('../models/member');
+
+exports.signup = (req, res, next) => {
+    bcrypt.hash(req.body.password, 10).then(
+        (hash) => {
+            const member = new Member({
+                email: req.body.email,
+                password: hash
+            });
+            member.save().then(
+                () => {
+                    res.status(201).json({
+                        message: 'Member added successfully!'
+                    });
+                }
+            ).catch(
+                (error) => {
+                    res.status(500).json({
+                        error: error
+                    });
+                }
+            );
+        }
+    );
+};
+
+exports.login = (req, res, next) => {
+   Member.findOne({ email: req.body.email })
+       .then(member => {
+           if (!member) {
+               return res.status(401).json({ error: 'Utilisateur non trouvé !' });
+           }
+           bcrypt.compare(req.body.password, member.password)
+               .then(valid => {
+                   if (!valid) {
+                       return res.status(401).json({ error: 'Mot de passe incorrect !' });
+                   }
+                   res.status(200).json({
+                       userId: member._id,
+                       token: jwt.sign(
+                           { userId: member._id },
+                           'RANDOM_TOKEN_SECRET',
+                           { expiresIn: '24h' }
+                       )
+                   });
+               })
+               .catch(error => res.status(500).json({ error }));
+       })
+       .catch(error => res.status(500).json({ error }));
+};
