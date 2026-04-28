@@ -2,13 +2,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 
-// const bookRoutes = require('./routes/book');
-const meberRoutes = require('./routes/member');
+const bookRoutes = require('./routes/book');
+const userRoutes = require('./routes/user');
 
 const app = express();
 
-// mongoose.connect('mongodb+srv://igorvish_db_user:t3BOGSzsi6A6Pzy6@cluster0.qpbqu6v.mongodb.net/?appName=Cluster0')
-mongoose.connect('mongodb://localhost:27017/mongoDbLocal2026')
+mongoose.connect('mongodb://localhost:27017/grimoireBookstoreDb')
   .then(() => console.log('Successfully connected to MongoDB!'))
   .catch((error) => {
     console.log('MongoDB connection failed!');
@@ -24,8 +23,10 @@ app.use((req, res, next) => {
 });
 
 app.use(bodyParser.json());
+app.use(express.json());
 
-// app.use('/api/books', bookRoutes);
-app.use('/api/auth', meberRoutes);
+app.use('/api/auth', userRoutes);
+app.use('/api/books', bookRoutes);
+
 
 module.exports = app;
