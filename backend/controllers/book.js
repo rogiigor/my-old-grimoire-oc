@@ -1,8 +1,10 @@
 const book = require('../models/book');
 const Book = require('../models/book');
 const fs = require('fs');
+const sharp = require('sharp');
+const path = require('path');
 
-exports.createBook = (req, res, next) => {
+exports.createBook = async (req, res, next) => {
     req.body.book = JSON.parse(req.body.book);
     const url = req.protocol + '://' + req.get('host');
 
@@ -20,11 +22,13 @@ exports.createBook = (req, res, next) => {
     const averageRating = ratings.length > 0 ?
       ratings[0].grade : 0;
 
+    const optimizedFileName = await optimizeImage(req);
+
     const book = new Book({
         userId: bookData.userId,
         title: bookData.title,
         author: bookData.author,
-        imageUrl: url + '/images/' + req.file.filename,
+        imageUrl: url + '/images/' + optimizedFileName,
         year: bookData.year,
         genre: bookData.genre,
         ratings: ratings,
@@ -42,17 +46,18 @@ exports.getOneBook = (req, res, next) => {
   .catch(error => res.status(404).json({ error: error }))
 };
 
-exports.modifyBook = (req, res, next) => {
+exports.modifyBook = async (req, res, next) => {
     let book = new Book({ _id: req.params._id});
     if (req.file) {
        req.body.book = JSON.parse(req.body.book);
        const url = req.protocol + '://' + req.get('host');
+       const optimizedFileName = await optimizeImage(req);
        book = {
           _id: req.params.id,
           userId: req.body.book.userId,
           title: req.body.book.title,
           author: req.body.book.author,
-          imageUrl: url + '/images/' + req.file.filename,
+          imageUrl: url + '/images/' + optimizedFileName,
           year: req.body.book.year,
           genre: req.body.book.genre
       };
@@ -103,7 +108,6 @@ exports.createRating = (req, res, next) => {
   Book.findOne({_id: req.params.id}).then(
     (book) => {
       if (!book) {
-        console
         return res.status(404).json({ message: 'Book not found' });
       }
 
@@ -139,3 +143,22 @@ exports.bestRating = (req, res, next) => {
       res.status(200).json(bestRated);
     }).catch(error => res.status(400).json({ error: error }));
 };
+
+async function optimizeImage(req) {
+  const originalFilePath = req.file.path;
+  const optimizedFileName = 'optimized_' + req.file.filename
+    .split('.')[0] + '.webp';
+  const optimizedFilePath = 'images/' + optimizedFileName;
+
+  await sharp(originalFilePath)
+    .webp({
+      quality: 76,
+      effore: 6,
+      lossless: false,
+      nearLosless: false
+    })
+    .toFile(optimizedFilePath);
+  fs.unlinkSync(originalFilePath);
+  return optimizedFileName;
+}
+
